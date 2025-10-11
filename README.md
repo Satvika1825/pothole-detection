@@ -66,11 +66,3 @@ The dataset was collected, labeled, and augmented using **Roboflow**, and the mo
 - **Precision (50%)** indicates the model detects potholes correctly half the time.
 - **Recall (26%)** shows there is still room for improvement in identifying all potholes.
 
----
-
-## 🚀 How to Run Locally
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/pothole-detection.git
-   cd pothole-detection
