@@ -41,28 +41,3 @@ The dataset was collected, labeled, and augmented using **Roboflow**, and the mo
 
 ---
 
-## 📈 Evaluation Metrics
-
-| Metric | Description | Result |
-|---------|--------------|--------|
-| **Precision** | Measures how many of the detected potholes are actually potholes | **0.55** |
-| **Recall** | Measures how many actual potholes were correctly detected | **0.267** |
-| **mAP@50** | Mean Average Precision at IoU threshold 0.5 | **0.312** |
-| **mAP@50-95** | Mean Average Precision at IoU thresholds 0.5 to 0.95 | **0.179** |
-
-### 🔍 Class-wise Performance
-
-| Class | Precision | Recall | mAP@50 | mAP@50-95 |
-|--------|------------|---------|---------|------------|
-| **objects** | 0.493 | 0.333 | 0.351 | 0.274 |
-| **pothole** | 0.550 | 0.202 | 0.273 | 0.084 |
-
----
-
-## 🧠 Results Summary
-
-- The model successfully detects **potholes and objects** in most clear images.
-- Detection performance is **moderate** due to variations in lighting, texture, and pothole shapes.
-- **Precision (50%)** indicates the model detects potholes correctly half the time.
-- **Recall (26%)** shows there is still room for improvement in identifying all potholes.
-
