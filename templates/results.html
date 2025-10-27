@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detection Results - Pothole Detection</title>
+    <style>
+        body { font-family: Arial; max-width: 900px; margin: 50px auto; padding: 20px; }
+        .result { padding: 20px; background: #d4edda; border: 2px solid #28a745; margin: 20px 0; text-align: center; font-size: 24px; }
+        .result.detected { background: #f8d7da; border-color: #dc3545; }
+        img { max-width: 100%; border: 2px solid #ddd; margin: 20px 0; }
+        .nav { margin-top: 20px; }
+        .info { background: #e7f3ff; padding: 15px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h2>🔍 Detection Results</h2>
+    
+    <div class="result {% if 'Detected' in result %}detected{% endif %}">
+        {{ result }}
+    </div>
+    
+    <div class="info">
+        <strong>📍 Location:</strong> {{ location }}
+    </div>
+    
+    <h3>Analyzed Image:</h3>
+    <img src="{{ image_path }}" alt="Detection Result">
+    
+    <div class="nav">
+        <a href="/upload" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Upload Another Image</a>
+        <a href="/logout" style="padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px; margin-left: 10px;">Logout</a>
+    </div>
+</body>
+</html>
+```
+
+### Step 4: Verify Folder Structure
+
+Your project should look like this:
+```
+C:\Users\HP\Downloads\pothole_detection\
+├── app.py
+├── .env
+├── database.db
+├── model/
+│   └── pothole_yolov11_best.pt
+├── templates/          ← NEW FOLDER
+│   ├── login.html      ← NEW
+│   ├── register.html   ← NEW
+│   ├── upload.html     ← NEW
+│   └── results.html    ← NEW
+└── static/
+    ├── uploads/
+    └── results/

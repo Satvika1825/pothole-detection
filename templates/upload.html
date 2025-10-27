@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Image - Pothole Detection</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #ff6b6b; color: white; border: none; cursor: pointer; font-size: 16px; }
+        button:hover { background: #ff5252; }
+        .message { color: red; padding: 10px; background: #ffe6e6; margin: 10px 0; }
+        .nav { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>📸 Upload Pothole Image</h2>
+    <p>Welcome, <strong>{{ session['user'] }}</strong>!</p>
+    
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="POST" enctype="multipart/form-data">
+        <label>Select Image:</label>
+        <input type="file" name="image" accept="image/*" required>
+        
+        <label>Location (Optional):</label>
+        <input type="text" name="location" placeholder="e.g., Main Street, City Center">
+        
+        <button type="submit">🔍 Detect Pothole</button>
+    </form>
+    
+    <div class="nav">
+        <a href="/logout">Logout</a>
+    </div>
+</body>
+</html>
