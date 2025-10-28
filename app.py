@@ -100,14 +100,47 @@ def load_model():
     try:
         app.logger.info(f"Loading model from {MODEL_PATH} ...")
         model = YOLO(MODEL_PATH)
-        app.logger.info("Model loaded successfully.")
+        
+        # ✅ DEBUG: Print original class names
+        app.logger.info(f"Original model classes: {model.names}")
+        
+        # ✅ FIX: Ensure class names are correct
+        # Check what classes exist in the model
+        existing_classes = model.names
+        
+        # If your model was trained with only class 0 and 1, but it's detecting class 2,
+        # it means there's a mismatch. Let's ensure we have the right mapping.
+        
+        # Option 1: If you trained on pothole only (single class)
+        if len(existing_classes) == 1:
+            model.names = {0: 'pothole'}
+            app.logger.info(f"✅ Single-class model detected. Using: {model.names}")
+        
+        # Option 2: If you trained on 2 classes (pothole and normal/background)
+        elif len(existing_classes) == 2:
+            model.names = {0: 'pothole', 1: 'normal'}
+            app.logger.info(f"✅ Two-class model detected. Using: {model.names}")
+        
+        # Option 3: If model has 3 classes, add the missing one
+        elif len(existing_classes) >= 3:
+            # Keep existing names but ensure all IDs are covered
+            app.logger.warning(f"⚠️ Model has {len(existing_classes)} classes")
+            app.logger.info(f"✅ Using existing class mapping: {model.names}")
+        
+        # Ensure the names dict covers all possible class IDs
+        max_class_id = max(existing_classes.keys()) if existing_classes else 0
+        for i in range(max_class_id + 1):
+            if i not in model.names:
+                model.names[i] = f'unknown_class_{i}'
+                app.logger.warning(f"⚠️ Added placeholder for missing class {i}")
+        
+        app.logger.info(f"✅ Final model classes: {model.names}")
         return model
+
     except Exception as e:
         app.logger.exception(f"Failed to load model: {e}")
         model = None
         return None
-
-load_model()
 
 # ========================
 # Email Notification with Images
