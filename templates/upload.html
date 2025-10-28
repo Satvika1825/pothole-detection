@@ -1,40 +1,449 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Upload Image - Pothole Detection</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload - Pothole Detection System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #ff6b6b; color: white; border: none; cursor: pointer; font-size: 16px; }
-        button:hover { background: #ff5252; }
-        .message { color: red; padding: 10px; background: #ffe6e6; margin: 10px 0; }
-        .nav { margin-top: 20px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f7fafc; min-height: 100vh; }
+        
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px 0;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .logout-btn {
+            padding: 8px 20px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .tab:hover { background: #edf2f7; }
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .upload-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+        
+        .drop-zone {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f7fafc;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .drop-zone:hover { border-color: #667eea; background: #edf2f7; }
+        .drop-zone.dragover { border-color: #667eea; background: #ebf4ff; }
+        
+        .camera-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        #camera-video {
+            width: 100%;
+            max-width: 640px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        #camera-canvas { display: none; }
+        
+        .camera-preview {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .camera-preview img {
+            max-width: 100%;
+            border-radius: 12px;
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success { background: #48bb78; color: white; }
+        .btn-danger { background: #f56565; color: white; }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+            margin-bottom: 20px;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .file-input { display: none; }
+        
+        .preview-container {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f56565;
+        }
+        
+        .alert-error { background: #fee; color: #c53030; }
+        .alert-success { background: #e6fffa; color: #234e52; border-left-color: #38b2ac; }
     </style>
 </head>
 <body>
-    <h2>📸 Upload Pothole Image</h2>
-    <p>Welcome, <strong>{{ session['user'] }}</strong>!</p>
-    
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="message">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-    
-    <form method="POST" enctype="multipart/form-data">
-        <label>Select Image:</label>
-        <input type="file" name="image" accept="image/*" required>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand"><span>🚧</span><span>Pothole Detection</span></div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="user-avatar">{{ session['user'][0].upper() }}</div>
+                <span><strong>{{ session['user'] }}</strong></span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="text-align: center; margin-bottom: 30px; color: #2d3748;">Upload or Capture</h1>
         
-        <label>Location (Optional):</label>
-        <input type="text" name="location" placeholder="e.g., Main Street, City Center">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
         
-        <button type="submit">🔍 Detect Pothole</button>
-    </form>
-    
-    <div class="nav">
-        <a href="/logout">Logout</a>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('image')">📷 Upload Image</div>
+            <div class="tab" onclick="switchTab('video')">🎥 Upload Video</div>
+            <div class="tab" onclick="switchTab('camera')">📸 Use Camera</div>
+        </div>
+
+        <!-- IMAGE UPLOAD TAB -->
+        <div id="image-tab" class="tab-content active">
+            <div class="upload-card">
+                <form method="POST" enctype="multipart/form-data" id="imageForm">
+                    <input type="hidden" name="upload_type" value="image">
+                    <div class="drop-zone" id="imageDropZone">
+                        <div style="font-size: 64px; margin-bottom: 20px;">📸</div>
+                        <h3>Drag & Drop Image</h3>
+                        <p>or</p>
+                        <label for="imageInput" class="btn btn-primary">Browse Files</label>
+                        <input type="file" name="file" id="imageInput" class="file-input" accept="image/*" required>
+                        <p style="margin-top: 15px; font-size: 12px;">JPG, PNG, JPEG</p>
+                    </div>
+                    <div class="preview-container" id="imagePreview">
+                        <img id="imagePreviewImg" class="preview-image">
+                    </div>
+                    <input type="text" name="location" placeholder="Location (e.g., Main Street, City)">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">🔍 Detect Pothole</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VIDEO UPLOAD TAB -->
+        <div id="video-tab" class="tab-content">
+            <div class="upload-card">
+                <form method="POST" enctype="multipart/form-data" id="videoForm">
+                    <input type="hidden" name="upload_type" value="video">
+                    <div class="drop-zone" id="videoDropZone">
+                        <div style="font-size: 64px; margin-bottom: 20px;">🎥</div>
+                        <h3>Drag & Drop Video</h3>
+                        <p>or</p>
+                        <label for="videoInput" class="btn btn-primary">Browse Files</label>
+                        <input type="file" name="file" id="videoInput" class="file-input" accept="video/*" required>
+                        <p style="margin-top: 15px; font-size: 12px;">MP4, AVI, MOV, MKV (Max 500MB)</p>
+                    </div>
+                    <div class="preview-container" id="videoPreview">
+                        <video id="videoPreviewVid" controls style="max-width: 100%; border-radius: 8px;"></video>
+                    </div>
+                    <input type="text" name="location" placeholder="Location (e.g., Highway 101)">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">🔍 Process Video</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- CAMERA TAB -->
+        <div id="camera-tab" class="tab-content">
+            <div class="upload-card">
+                <div class="camera-container">
+                    <h3 style="margin-bottom: 20px;">Live Camera</h3>
+                    <video id="camera-video" autoplay playsinline></video>
+                    <canvas id="camera-canvas"></canvas>
+                    
+                    <div class="camera-preview" id="cameraPreview">
+                        <img id="capturedImage">
+                    </div>
+                    
+                    <div id="cameraButtons">
+                        <button type="button" class="btn btn-success" id="startCamera">📹 Start Camera</button>
+                        <button type="button" class="btn btn-primary" id="captureBtn" style="display: none;">📸 Capture Photo</button>
+                        <button type="button" class="btn btn-danger" id="retakeBtn" style="display: none;">🔄 Retake</button>
+                    </div>
+                </div>
+                
+                <form method="POST" id="cameraForm" style="display: none;">
+                    <input type="hidden" name="upload_type" value="camera">
+                    <input type="hidden" name="camera_image" id="cameraImageData">
+                    <input type="text" name="location" placeholder="Location" style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">🔍 Detect Pothole</button>
+                </form>
+            </div>
+        </div>
     </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
+        }
+
+        // Image upload
+        const imageInput = document.getElementById('imageInput');
+        const imageDropZone = document.getElementById('imageDropZone');
+        const imagePreview = document.getElementById('imagePreview');
+        const imagePreviewImg = document.getElementById('imagePreviewImg');
+
+        imageInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreviewImg.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    imageDropZone.style.display = 'none';
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        // Video upload
+        const videoInput = document.getElementById('videoInput');
+        const videoPreview = document.getElementById('videoPreview');
+        const videoPreviewVid = document.getElementById('videoPreviewVid');
+        const videoDropZone = document.getElementById('videoDropZone');
+
+        videoInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const url = URL.createObjectURL(file);
+                videoPreviewVid.src = url;
+                videoPreview.style.display = 'block';
+                videoDropZone.style.display = 'none';
+            }
+        });
+
+        // Camera functionality
+        let stream = null;
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('camera-canvas');
+        const capturedImage = document.getElementById('capturedImage');
+        const startCameraBtn = document.getElementById('startCamera');
+        const captureBtn = document.getElementById('captureBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const cameraForm = document.getElementById('cameraForm');
+        const cameraImageData = document.getElementById('cameraImageData');
+
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = stream;
+                video.style.display = 'block';
+                startCameraBtn.style.display = 'none';
+                captureBtn.style.display = 'inline-block';
+            } catch (err) {
+                alert('Error accessing camera: ' + err.message);
+            }
+        });
+
+        captureBtn.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            const imageDataUrl = canvas.toDataURL('image/jpeg');
+            capturedImage.src = imageDataUrl;
+            cameraImageData.value = imageDataUrl;
+            
+            cameraPreview.style.display = 'block';
+            video.style.display = 'none';
+            captureBtn.style.display = 'none';
+            retakeBtn.style.display = 'inline-block';
+            cameraForm.style.display = 'block';
+            
+            // Stop camera stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        retakeBtn.addEventListener('click', async () => {
+            cameraPreview.style.display = 'none';
+            cameraForm.style.display = 'none';
+            retakeBtn.style.display = 'none';
+            
+            // Restart camera
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = stream;
+                video.style.display = 'block';
+                captureBtn.style.display = 'inline-block';
+            } catch (err) {
+                alert('Error accessing camera: ' + err.message);
+                startCameraBtn.style.display = 'inline-block';
+            }
+        });
+
+        // Drag and drop for image
+        imageDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageDropZone.classList.add('dragover');
+        });
+
+        imageDropZone.addEventListener('dragleave', () => {
+            imageDropZone.classList.remove('dragover');
+        });
+
+        imageDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                imageInput.files = e.dataTransfer.files;
+                imageInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // Drag and drop for video
+        videoDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            videoDropZone.classList.add('dragover');
+        });
+
+        videoDropZone.addEventListener('dragleave', () => {
+            videoDropZone.classList.remove('dragover');
+        });
+
+        videoDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            videoDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                videoInput.files = e.dataTransfer.files;
+                videoInput.dispatchEvent(new Event('change'));
+            }
+        });
+    </script>
 </body>
 </html>

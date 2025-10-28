@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from dotenv import load_dotenv
 load_dotenv()
 import sqlite3
@@ -7,23 +7,48 @@ from werkzeug.utils import secure_filename
 from ultralytics import YOLO
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from datetime import datetime
-import glob
+import cv2
+import base64
+from pathlib import Path
 
 # ========================
 # Flask Configuration
 # ========================
 app = Flask(__name__)
-# Flask secret key from .env
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback_secret_key")
 
 UPLOAD_FOLDER = 'static/uploads'
 RESULT_FOLDER = 'static/results'
+VIDEO_FOLDER = 'static/videos'
+DETECTED_FRAMES_FOLDER = 'static/detected_frames'
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULT_FOLDER'] = RESULT_FOLDER
+app.config['VIDEO_FOLDER'] = VIDEO_FOLDER
+app.config['DETECTED_FRAMES_FOLDER'] = DETECTED_FRAMES_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(RESULT_FOLDER, exist_ok=True)
+# Create directories
+for folder in [UPLOAD_FOLDER, RESULT_FOLDER, VIDEO_FOLDER, DETECTED_FRAMES_FOLDER]:
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(os.path.join(RESULT_FOLDER, 'detected'), exist_ok=True)
+
+# Allowed extensions
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp'}
+ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv'}
+
+def allowed_file(filename, file_type='image'):
+    if '.' not in filename:
+        return False
+    ext = filename.rsplit('.', 1)[1].lower()
+    if file_type == 'image':
+        return ext in ALLOWED_IMAGE_EXTENSIONS
+    elif file_type == 'video':
+        return ext in ALLOWED_VIDEO_EXTENSIONS
+    return False
 
 # ========================
 # Database Setup
@@ -35,7 +60,23 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
+            password TEXT NOT NULL,
+            email TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS detections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            detection_type TEXT,
+            location TEXT,
+            file_path TEXT,
+            result_path TEXT,
+            pothole_count INTEGER DEFAULT 0,
+            detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            alert_sent BOOLEAN DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
     conn.commit()
@@ -44,10 +85,10 @@ def init_db():
 init_db()
 
 # ========================
-# Model Setup (correct path & robust loading)
+# Model Setup
 # ========================
 MODEL_PATH = os.path.join(os.getcwd(), 'model', 'pothole_yolov11_best.pt')
-model = None  # global variable
+model = None
 
 def load_model():
     global model
@@ -66,35 +107,131 @@ def load_model():
         model = None
         return None
 
-# Try load model on startup (best-effort)
 load_model()
 
 # ========================
-# Email Notification
+# Email Notification with Images
 # ========================
-def notify_authorities(image_path, location="Unknown"):
+def notify_authorities(detection_data):
+    """
+    Send email to authorities with pothole images
+    detection_data = {
+        'images': [list of image paths],
+        'location': 'location string',
+        'count': number of potholes,
+        'timestamp': datetime
+    }
+    """
     sender = os.getenv("NOTIFY_SENDER_EMAIL")
     app_password = os.getenv("NOTIFY_APP_PASSWORD")
     recipient = os.getenv("NOTIFY_RECIPIENT")
 
     if not sender or not app_password or not recipient:
         app.logger.error("❌ Email credentials missing in .env")
-        return
-
-    msg = MIMEText(f"A pothole has been detected at {location}.\n\nImage path: {image_path}")
-    msg["Subject"] = "🚨 Pothole Alert!"
-    msg["From"] = sender
-    msg["To"] = recipient
+        return False
 
     try:
+        msg = MIMEMultipart()
+        msg["Subject"] = f"🚨 URGENT: {detection_data['count']} Pothole(s) Detected!"
+        msg["From"] = sender
+        msg["To"] = recipient
+
+        # Email body
+        body = f"""
+        POTHOLE DETECTION ALERT
+        =======================
+        
+        Location: {detection_data['location']}
+        Number of Potholes: {detection_data['count']}
+        Detected At: {detection_data['timestamp']}
+        Detection Type: {detection_data.get('type', 'Image')}
+        
+        Please take immediate action to repair the detected road damage.
+        
+        Attached: Detection images showing pothole locations
+        
+        ---
+        Automated Pothole Detection System
+        """
+        
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Attach images
+        for idx, img_path in enumerate(detection_data['images'][:5]):  # Limit to 5 images
+            if os.path.exists(img_path):
+                with open(img_path, 'rb') as f:
+                    img_data = f.read()
+                    image = MIMEImage(img_data, name=f"pothole_{idx+1}.jpg")
+                    msg.attach(image)
+
         app.logger.info(f"📧 Connecting to Gmail SMTP as {sender}")
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
             server.login(sender, app_password)
             server.send_message(msg)
-        app.logger.info("✅ Email sent successfully to municipality.")
+        
+        app.logger.info("✅ Email with images sent successfully to authorities.")
+        return True
     except Exception as e:
         app.logger.exception(f"❌ Email sending failed: {e}")
+        return False
+
+# ========================
+# Video Processing Function
+# ========================
+def process_video(video_path, location, user_id):
+    """Process video and extract frames with potholes"""
+    m = load_model()
+    if m is None:
+        return None, []
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return None, []
+
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    frame_interval = max(1, fps // 2)  # Process 2 frames per second
+    
+    frame_count = 0
+    detected_frames = []
+    pothole_images = []
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_folder = os.path.join(app.config['DETECTED_FRAMES_FOLDER'], timestamp)
+    os.makedirs(output_folder, exist_ok=True)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        if frame_count % frame_interval == 0:
+            # Run detection on frame
+            results = m.predict(source=frame, save=False, verbose=False)
+            
+            # If potholes detected, save frame
+            if len(results[0].boxes) > 0:
+                annotated = results[0].plot()
+                frame_filename = f"frame_{frame_count}_potholes_{len(results[0].boxes)}.jpg"
+                frame_path = os.path.join(output_folder, frame_filename)
+                cv2.imwrite(frame_path, annotated)
+                
+                # FIX: Convert path to forward slashes
+                rel_path = frame_path.replace('\\', '/').replace('static/', '')
+                
+                detected_frames.append({
+                    'frame_number': frame_count,
+                    'pothole_count': len(results[0].boxes),
+                    'path': frame_path,
+                    'rel_path': rel_path
+                })
+                pothole_images.append(frame_path)
+
+        frame_count += 1
+
+    cap.release()
+    
+    return detected_frames, pothole_images
 
 # ========================
 # Routes
@@ -108,15 +245,18 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        email = request.form.get('email', '')
+        
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         try:
-            cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+            cursor.execute('INSERT INTO users (username, password, email) VALUES (?, ?, ?)', 
+                         (username, password, email))
             conn.commit()
-            flash('Registration successful! Please login.')
+            flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
-            flash('Username already exists!')
+            flash('Username already exists!', 'error')
         finally:
             conn.close()
     return render_template('register.html')
@@ -133,18 +273,20 @@ def login():
         conn.close()
         if user:
             session['user'] = username
+            session['user_id'] = user[0]
             return redirect(url_for('upload'))
         else:
-            flash('Invalid credentials!')
+            flash('Invalid credentials!', 'error')
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
     session.pop('user', None)
+    session.pop('user_id', None)
     return redirect(url_for('login'))
 
 # ========================
-# /upload Route
+# Upload Route (Image/Video/Camera)
 # ========================
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
@@ -152,72 +294,158 @@ def upload():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        file = request.files.get('image')
+        upload_type = request.form.get('upload_type', 'image')
         location = request.form.get('location', 'Unknown')
 
+        # Handle camera capture
+        if upload_type == 'camera':
+            image_data = request.form.get('camera_image')
+            if not image_data:
+                flash('No camera image captured.', 'error')
+                return redirect(request.url)
+
+            # Decode base64 image
+            try:
+                image_data = image_data.split(',')[1]
+                image_bytes = base64.b64decode(image_data)
+                
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"camera_{timestamp}.jpg"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                
+                with open(filepath, 'wb') as f:
+                    f.write(image_bytes)
+                
+                # Process the captured image
+                return process_image_detection(filepath, location, 'camera')
+                
+            except Exception as e:
+                flash(f'Error processing camera image: {e}', 'error')
+                return redirect(request.url)
+
+        # Handle file upload (image or video)
+        file = request.files.get('file')
         if not file or file.filename == '':
-            flash('No file selected.')
+            flash('No file selected.', 'error')
             return redirect(request.url)
 
-        # Save uploaded file
-        original = secure_filename(file.filename)
+        filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        upload_filename = f"{timestamp}_{original}"
-        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], upload_filename)
-        file.save(upload_path)
-
-        # Load YOLO model
-        m = load_model()
-        if m is None:
-            flash("Model not loaded. Check server logs.")
-            return redirect(request.url)
-
-        try:
-            # Run detection
-            results = m.predict(
-                source=upload_path,
-                save=False  # save manually
-            )
-
-            # Annotate image
-            annotated_image = results[0].plot()
-            detected_folder = os.path.join(app.config['RESULT_FOLDER'], 'detected')
-            os.makedirs(detected_folder, exist_ok=True)
-            result_image_filename = f"detected_{upload_filename}"
-            result_image_path = os.path.join(detected_folder, result_image_filename)
-            from cv2 import imwrite
-            imwrite(result_image_path, annotated_image)
-
-            # Pothole detection
-            pothole_detected = len(results[0].boxes) > 0
-            result_text = "🚧 Pothole Detected!" if pothole_detected else "✅ No Pothole Detected."
-
-            # Notify authorities
-            if pothole_detected:
-                notify_authorities(result_image_path, location)
-
-            # Static URL
-            rel_path = result_image_path.split('static/')[1].replace('\\', '/')
-            image_url = url_for('static', filename=rel_path)
-
-            return render_template(
-                'results.html',
-                result=result_text,
-                location=location,
-                image_path=image_url
-            )
-
-        except Exception as e:
-            flash(f"Error: {e}")
+        
+        # Check if it's video or image
+        if allowed_file(filename, 'video'):
+            upload_filename = f"{timestamp}_{filename}"
+            upload_path = os.path.join(app.config['VIDEO_FOLDER'], upload_filename)
+            file.save(upload_path)
+            return process_video_detection(upload_path, location)
+        
+        elif allowed_file(filename, 'image'):
+            upload_filename = f"{timestamp}_{filename}"
+            upload_path = os.path.join(app.config['UPLOAD_FOLDER'], upload_filename)
+            file.save(upload_path)
+            return process_image_detection(upload_path, location, 'image')
+        
+        else:
+            flash('Invalid file type. Please upload an image or video.', 'error')
             return redirect(request.url)
 
     return render_template('upload.html')
+
+def process_image_detection(image_path, location, detection_type):
+    """Process single image detection"""
+    m = load_model()
+    if m is None:
+        flash("Model not loaded. Check server logs.", 'error')
+        return redirect(url_for('upload'))
+
+    try:
+        results = m.predict(source=image_path, save=False, verbose=False)
+        annotated_image = results[0].plot()
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        result_filename = f"detected_{timestamp}.jpg"
+        result_path = os.path.join(app.config['RESULT_FOLDER'], 'detected', result_filename)
+        cv2.imwrite(result_path, annotated_image)
+
+        pothole_count = len(results[0].boxes)
+        pothole_detected = pothole_count > 0
+
+        # Save to database
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''INSERT INTO detections 
+                         (user_id, detection_type, location, file_path, result_path, pothole_count, alert_sent)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                      (session['user_id'], detection_type, location, image_path, result_path, pothole_count, pothole_detected))
+        conn.commit()
+        conn.close()
+
+        # Send alert if pothole detected
+        if pothole_detected:
+            detection_data = {
+                'images': [result_path],
+                'location': location,
+                'count': pothole_count,
+                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'type': detection_type.capitalize()
+            }
+            notify_authorities(detection_data)
+
+        # FIX: Convert Windows backslashes to forward slashes for URL
+        rel_path = result_path.replace('\\', '/').replace('static/', '')
+        
+        return render_template('results.html',
+                             result="Pothole Detected!" if pothole_detected else "No Pothole Detected",
+                             location=location,
+                             image_path=url_for('static', filename=rel_path),
+                             pothole_count=pothole_count,
+                             detection_type=detection_type,
+                             pothole_detected=pothole_detected)
+
+    except Exception as e:
+        app.logger.exception(f"Detection error: {e}")
+        flash(f"Error: {e}", 'error')
+        return redirect(url_for('upload'))
+
+def process_video_detection(video_path, location):
+    """Process video detection"""
+    detected_frames, pothole_images = process_video(video_path, location, session['user_id'])
+    
+    if detected_frames is None:
+        flash("Error processing video.", 'error')
+        return redirect(url_for('upload'))
+
+    total_potholes = sum(frame['pothole_count'] for frame in detected_frames)
+    
+    # Save to database
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''INSERT INTO detections 
+                     (user_id, detection_type, location, file_path, pothole_count, alert_sent)
+                     VALUES (?, ?, ?, ?, ?, ?)''',
+                  (session['user_id'], 'video', location, video_path, total_potholes, total_potholes > 0))
+    conn.commit()
+    conn.close()
+
+    # Send alert if potholes detected
+    if total_potholes > 0:
+        detection_data = {
+            'images': pothole_images,
+            'location': location,
+            'count': total_potholes,
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'type': 'Video'
+        }
+        notify_authorities(detection_data)
+
+    return render_template('video_results.html',
+                         detected_frames=detected_frames,
+                         location=location,
+                         total_potholes=total_potholes,
+                         frame_count=len(detected_frames))
 
 # ========================
 # Run Flask App
 # ========================
 if __name__ == '__main__':
-    app.logger.info(f"MODEL_PATH = {MODEL_PATH}")
-    app.logger.info(f"UPLOAD_FOLDER = {UPLOAD_FOLDER}")
-    app.logger.info(f"RESULT_FOLDER = {RESULT_FOLDER}")
-    app.run(debug=True)
+    app.run(debug=True, threaded=True)

@@ -1,53 +1,289 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Detection Results - Pothole Detection</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detection Results - Pothole Detection System</title>
     <style>
-        body { font-family: Arial; max-width: 900px; margin: 50px auto; padding: 20px; }
-        .result { padding: 20px; background: #d4edda; border: 2px solid #28a745; margin: 20px 0; text-align: center; font-size: 24px; }
-        .result.detected { background: #f8d7da; border-color: #dc3545; }
-        img { max-width: 100%; border: 2px solid #ddd; margin: 20px 0; }
-        .nav { margin-top: 20px; }
-        .info { background: #e7f3ff; padding: 15px; margin: 10px 0; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .result-banner {
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .result-banner.detected {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .result-banner.safe {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .info-card p {
+            font-size: 18px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .image-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .image-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 15px 35px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .alert-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #ff4757;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .result-banner {
+                font-size: 22px;
+                padding: 20px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
-    <h2>🔍 Detection Results</h2>
-    
-    <div class="result {% if 'Detected' in result %}detected{% endif %}">
-        {{ result }}
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Detection Results</h1>
+            <p>Pothole Detection System</p>
+        </div>
+        
+        <div class="content">
+            {% if pothole_detected %}
+            <div class="result-banner detected">
+                ⚠️ {{ result }}
+                <div class="alert-badge">🚨 Authorities Notified</div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">{{ pothole_count }}</div>
+                    <div class="stat-label">Potholes Detected</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="result-banner safe">
+                ✅ {{ result }}
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">Road is Clear</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>📍 Location</h3>
+                    <p>{{ location }}</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>📷 Detection Type</h3>
+                    <p>{{ detection_type|capitalize }}</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>🕒 Timestamp</h3>
+                    <p>{{ timestamp }}</p>
+                </div>
+            </div>
+            
+            <div class="image-container">
+                <h2>📊 Analyzed Image</h2>
+                <img src="{{ image_path }}" alt="Detection Result" onerror="this.src='/static/placeholder.jpg'; this.alt='Image not found';">
+            </div>
+            
+            <div class="actions">
+                <a href="/upload" class="btn btn-primary">📤 Upload Another</a>
+                <a href="/logout" class="btn btn-secondary">🚪 Logout</a>
+            </div>
+        </div>
     </div>
-    
-    <div class="info">
-        <strong>📍 Location:</strong> {{ location }}
-    </div>
-    
-    <h3>Analyzed Image:</h3>
-    <img src="{{ image_path }}" alt="Detection Result">
-    
-    <div class="nav">
-        <a href="/upload" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Upload Another Image</a>
-        <a href="/logout" style="padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px; margin-left: 10px;">Logout</a>
-    </div>
+
+    <script>
+        // Add timestamp if not provided by backend
+        const timestampElements = document.querySelectorAll('.info-card p');
+        timestampElements.forEach(el => {
+            if (el.parentElement.querySelector('h3').textContent.includes('Timestamp')) {
+                if (el.textContent === '{{ timestamp }}' || el.textContent.trim() === '') {
+                    const now = new Date();
+                    el.textContent = now.toLocaleString();
+                }
+            }
+        });
+    </script>
 </body>
 </html>
-```
-
-### Step 4: Verify Folder Structure
-
-Your project should look like this:
-```
-C:\Users\HP\Downloads\pothole_detection\
-├── app.py
-├── .env
-├── database.db
-├── model/
-│   └── pothole_yolov11_best.pt
-├── templates/          ← NEW FOLDER
-│   ├── login.html      ← NEW
-│   ├── register.html   ← NEW
-│   ├── upload.html     ← NEW
-│   └── results.html    ← NEW
-└── static/
-    ├── uploads/
-    └── results/

@@ -1,7 +1,7 @@
 FLASK_SECRET_KEY=pothole_detection123
 
-NOTIFY_SENDER_EMAIL=sathwikayalla34.com
-NOTIFY_APP_PASSWORD=yChitti017
-NOTIFY_RECIPIENT=officer1@gmail.com,officer2@gmail.com
+NOTIFY_SENDER_EMAIL=patnamsatvika@gmail.com
+NOTIFY_APP_PASSWORD=maik mtsn xmnm wvgr
+NOTIFY_RECIPIENT=satvikapatnam@gmail.com
 
 
