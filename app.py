@@ -126,8 +126,16 @@ def notify_authorities(detection_data):
     app_password = os.getenv("NOTIFY_APP_PASSWORD")
     recipient = os.getenv("NOTIFY_RECIPIENT")
 
+    app.logger.info(f"📧 Email notification triggered for {detection_data['count']} pothole(s)")
+    app.logger.info(f"   Sender: {sender}")
+    app.logger.info(f"   Recipient: {recipient}")
+    app.logger.info(f"   Images to attach: {len(detection_data['images'])}")
+
     if not sender or not app_password or not recipient:
         app.logger.error("❌ Email credentials missing in .env")
+        app.logger.error(f"   NOTIFY_SENDER_EMAIL: {'SET' if sender else 'MISSING'}")
+        app.logger.error(f"   NOTIFY_APP_PASSWORD: {'SET' if app_password else 'MISSING'}")
+        app.logger.error(f"   NOTIFY_RECIPIENT: {'SET' if recipient else 'MISSING'}")
         return False
 
     try:
@@ -138,42 +146,81 @@ def notify_authorities(detection_data):
 
         # Email body
         body = f"""
-        POTHOLE DETECTION ALERT
-        =======================
-        
-        Location: {detection_data['location']}
-        Number of Potholes: {detection_data['count']}
-        Detected At: {detection_data['timestamp']}
-        Detection Type: {detection_data.get('type', 'Image')}
-        
-        Please take immediate action to repair the detected road damage.
-        
-        Attached: Detection images showing pothole locations
-        
-        ---
-        Automated Pothole Detection System
+POTHOLE DETECTION ALERT
+=======================
+
+⚠️ IMMEDIATE ATTENTION REQUIRED ⚠️
+
+Location: {detection_data['location']}
+Number of Potholes: {detection_data['count']}
+Detected At: {detection_data['timestamp']}
+Detection Type: {detection_data.get('type', 'Image')}
+
+Please take immediate action to repair the detected road damage.
+This is an automated alert from the Pothole Detection System.
+
+Attached: {len(detection_data['images'])} detection image(s) showing pothole locations
+
+---
+Automated Pothole Detection System
+Contact: {sender}
         """
         
         msg.attach(MIMEText(body, 'plain'))
 
-        # Attach images
+        # Attach images with better error handling
+        attached_count = 0
         for idx, img_path in enumerate(detection_data['images'][:5]):  # Limit to 5 images
             if os.path.exists(img_path):
-                with open(img_path, 'rb') as f:
-                    img_data = f.read()
-                    image = MIMEImage(img_data, name=f"pothole_{idx+1}.jpg")
-                    msg.attach(image)
+                try:
+                    with open(img_path, 'rb') as f:
+                        img_data = f.read()
+                        image = MIMEImage(img_data, name=f"pothole_detection_{idx+1}.jpg")
+                        msg.attach(image)
+                        attached_count += 1
+                        app.logger.info(f"   ✓ Attached image {idx+1}: {os.path.basename(img_path)}")
+                except Exception as img_error:
+                    app.logger.error(f"   ✗ Failed to attach image {idx+1}: {img_error}")
+            else:
+                app.logger.warning(f"   ✗ Image not found: {img_path}")
 
-        app.logger.info(f"📧 Connecting to Gmail SMTP as {sender}")
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        app.logger.info(f"📧 Connecting to Gmail SMTP server (smtp.gmail.com:587)...")
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as server:
+            app.logger.info("🔐 Starting TLS encryption...")
             server.starttls()
+            
+            app.logger.info(f"🔑 Logging in as {sender}...")
             server.login(sender, app_password)
+            
+            app.logger.info("📤 Sending email with attachments...")
             server.send_message(msg)
         
-        app.logger.info("✅ Email with images sent successfully to authorities.")
+        app.logger.info("=" * 60)
+        app.logger.info(f"✅ EMAIL SENT SUCCESSFULLY!")
+        app.logger.info(f"   To: {recipient}")
+        app.logger.info(f"   Attachments: {attached_count} image(s)")
+        app.logger.info(f"   Subject: {msg['Subject']}")
+        app.logger.info("=" * 60)
         return True
+        
+    except smtplib.SMTPAuthenticationError as e:
+        app.logger.error("=" * 60)
+        app.logger.error("❌ SMTP AUTHENTICATION FAILED!")
+        app.logger.error("=" * 60)
+        app.logger.error("   Possible issues:")
+        app.logger.error("   1. App Password is incorrect")
+        app.logger.error("   2. 2-Step Verification not enabled")
+        app.logger.error("   3. Need to generate new App Password")
+        app.logger.error(f"   Error: {e}")
+        app.logger.error("=" * 60)
+        return False
+        
+    except smtplib.SMTPException as e:
+        app.logger.error(f"❌ SMTP Error: {e}")
+        return False
+        
     except Exception as e:
-        app.logger.exception(f"❌ Email sending failed: {e}")
+        app.logger.exception(f"❌ Email sending failed with unexpected error: {e}")
         return False
 
 # ========================
