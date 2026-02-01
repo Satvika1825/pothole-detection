@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detection Results - Pothole Detection System</title>
+    <title>Detection Results - {{ result }}</title>
     <style>
         * {
             margin: 0;
@@ -15,275 +15,332 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
         }
         
         .container {
-            max-width: 1000px;
-            margin: 0 auto;
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .content {
             padding: 40px;
+            max-width: 900px;
+            width: 100%;
         }
         
-        .result-banner {
-            padding: 30px;
-            border-radius: 15px;
-            margin: 20px 0;
+        .result-header {
             text-align: center;
-            font-size: 28px;
+            margin-bottom: 30px;
+        }
+        
+        .result-title {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .result-title.detected {
+            color: #e74c3c;
+        }
+        
+        .result-title.clear {
+            color: #27ae60;
+        }
+        
+        .severity-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .severity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .severity-badge {
+            display: inline-block;
+            padding: 10px 25px;
+            border-radius: 25px;
             font-weight: bold;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            font-size: 1.3em;
         }
         
-        .result-banner.detected {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        .severity-badge.critical {
+            background: #e74c3c;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .severity-badge.high {
+            background: #e67e22;
             color: white;
         }
         
-        .result-banner.safe {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        .severity-badge.medium {
+            background: #f39c12;
             color: white;
+        }
+        
+        .severity-badge.low {
+            background: #3498db;
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .priority-badge {
+            background: #667eea;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
         }
         
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
         }
         
-        .info-card {
+        .info-item {
             background: #f8f9fa;
-            padding: 20px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 10px;
             border-left: 4px solid #667eea;
         }
         
-        .info-card h3 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .info-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
         }
         
-        .info-card p {
-            font-size: 18px;
+        .info-value {
+            font-size: 1.2em;
+            font-weight: bold;
             color: #333;
-            font-weight: 500;
+        }
+        
+        .due-date {
+            color: #e67e22;
         }
         
         .image-container {
-            margin: 30px 0;
-            text-align: center;
-        }
-        
-        .image-container h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-        
-        .image-container img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 12px;
+            margin: 25px 0;
+            border-radius: 15px;
+            overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         
-        .actions {
+        .image-container img {
+            width: 100%;
+            display: block;
+        }
+        
+        .potholes-breakdown {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .potholes-breakdown h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        
+        .pothole-item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
             display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 40px;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .btn {
-            padding: 15px 35px;
-            border: none;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-        
-        .alert-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            background: #ff4757;
-            color: white;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-top: 10px;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-number {
-            font-size: 48px;
+        .pothole-number {
             font-weight: bold;
             color: #667eea;
         }
         
-        .stat-label {
+        .pothole-size {
             color: #666;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.8em;
-            }
-            
-            .result-banner {
-                font-size: 22px;
-                padding: 20px;
-            }
-            
-            .actions {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-            }
+        
+        .alert-status {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .alert-status.sent {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        .alert-status.not-sent {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🔍 Detection Results</h1>
-            <p>Pothole Detection System</p>
+        <div class="result-header">
+            <h1 class="result-title {% if pothole_detected %}detected{% else %}clear{% endif %}">
+                {% if pothole_detected %}
+                    🚨 {{ result }}
+                {% else %}
+                    ✅ {{ result }}
+                {% endif %}
+            </h1>
         </div>
         
-        <div class="content">
-            {% if pothole_detected %}
-            <div class="result-banner detected">
-                ⚠️ {{ result }}
-                <div class="alert-badge">🚨 Authorities Notified</div>
-            </div>
-            
-            <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-number">{{ pothole_count }}</div>
-                    <div class="stat-label">Potholes Detected</div>
+        {% if pothole_detected %}
+        <div class="severity-section">
+            <div class="severity-header">
+                <div>
+                    <span class="severity-badge {{ severity.lower() }}">
+                        {{ severity }} SEVERITY
+                    </span>
+                </div>
+                <div>
+                    <span class="priority-badge">
+                        Priority Level {{ priority }}
+                    </span>
                 </div>
             </div>
-            {% else %}
-            <div class="result-banner safe">
-                ✅ {{ result }}
-            </div>
-            
-            <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-number">0</div>
-                    <div class="stat-label">Road is Clear</div>
-                </div>
-            </div>
-            {% endif %}
             
             <div class="info-grid">
-                <div class="info-card">
-                    <h3>📍 Location</h3>
-                    <p>{{ location }}</p>
+                <div class="info-item">
+                    <div class="info-label">📍 Location</div>
+                    <div class="info-value">{{ location }}</div>
                 </div>
-                
-                <div class="info-card">
-                    <h3>📷 Detection Type</h3>
-                    <p>{{ detection_type|capitalize }}</p>
+                <div class="info-item">
+                    <div class="info-label">🔢 Potholes Detected</div>
+                    <div class="info-value">{{ pothole_count }}</div>
                 </div>
-                
-                <div class="info-card">
-                    <h3>🕒 Timestamp</h3>
-                    <p>{{ timestamp }}</p>
+                <div class="info-item">
+                    <div class="info-label">📹 Detection Type</div>
+                    <div class="info-value">{{ detection_type.capitalize() }}</div>
                 </div>
-            </div>
-            
-            <div class="image-container">
-                <h2>📊 Analyzed Image</h2>
-                <img src="{{ image_path }}" alt="Detection Result" onerror="this.src='/static/placeholder.jpg'; this.alt='Image not found';">
-            </div>
-            
-            <div class="actions">
-                <a href="/upload" class="btn btn-primary">📤 Upload Another</a>
-                <a href="/logout" class="btn btn-secondary">🚪 Logout</a>
+                <div class="info-item">
+                    <div class="info-label">⏰ Response Due</div>
+                    <div class="info-value due-date">{{ due_date }}</div>
+                </div>
             </div>
         </div>
+        
+        {% if potholes_data %}
+        <div class="potholes-breakdown">
+            <h3>📊 Individual Pothole Analysis</h3>
+            {% for pothole in potholes_data %}
+            <div class="pothole-item">
+                <div>
+                    <span class="pothole-number">Pothole #{{ pothole.index + 1 }}</span>
+                    <span style="margin-left: 15px;">
+                        <span class="severity-badge {{ pothole.severity.lower() }}" style="font-size: 0.8em; padding: 3px 10px;">
+                            {{ pothole.severity }}
+                        </span>
+                    </span>
+                </div>
+                <div class="pothole-size">
+                    Size: {{ "%.0f"|format(pothole.area) }} px² 
+                    | Confidence: {{ "%.1f"|format(pothole.confidence * 100) }}%
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <div class="alert-status sent">
+            <strong>✅ Alert Sent to Authorities</strong>
+            <p style="margin-top: 8px; font-size: 0.95em;">
+                Repair crews have been notified and the detection has been added to the priority queue.
+            </p>
+        </div>
+        {% else %}
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">📍 Location</div>
+                <div class="info-value">{{ location }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">📹 Detection Type</div>
+                <div class="info-value">{{ detection_type.capitalize() }}</div>
+            </div>
+        </div>
+        
+        <div class="alert-status sent">
+            <strong>✅ No Potholes Detected</strong>
+            <p style="margin-top: 8px;">The road surface appears to be in good condition.</p>
+        </div>
+        {% endif %}
+        
+        <div class="image-container">
+            <img src="{{ image_path }}" alt="Detection Result">
+        </div>
+        
+        <div class="action-buttons">
+            <a href="/dashboard" class="btn btn-primary">📊 View Dashboard</a>
+            <a href="/upload" class="btn btn-success">➕ New Detection</a>
+            <a href="/logout" class="btn btn-secondary">🚪 Logout</a>
+        </div>
     </div>
-
-    <script>
-        // Add timestamp if not provided by backend
-        const timestampElements = document.querySelectorAll('.info-card p');
-        timestampElements.forEach(el => {
-            if (el.parentElement.querySelector('h3').textContent.includes('Timestamp')) {
-                if (el.textContent === '{{ timestamp }}' || el.textContent.trim() === '') {
-                    const now = new Date();
-                    el.textContent = now.toLocaleString();
-                }
-            }
-        });
-    </script>
 </body>
 </html>

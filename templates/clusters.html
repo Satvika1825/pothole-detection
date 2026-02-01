@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Optimization - Pothole Clusters</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2em;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .nav-links a {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .nav-links a:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        
+        .info-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .clusters-grid {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .cluster-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .cluster-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .cluster-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .cluster-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .severity-score {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .route-section {
+            margin-top: 20px;
+        }
+        
+        .route-header {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .route-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+        }
+        
+        .route-order {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            min-width: 40px;
+        }
+        
+        .route-details {
+            flex: 1;
+            margin-left: 15px;
+        }
+        
+        .route-location {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .route-coords {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .route-severity {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        
+        .route-severity.critical {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .route-severity.high {
+            background: #e67e22;
+            color: white;
+        }
+        
+        .route-severity.medium {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .route-severity.low {
+            background: #3498db;
+            color: white;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .empty-state i {
+            font-size: 4em;
+            color: #999;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Route Optimization</h1>
+            <div class="nav-links">
+                <a href="/dashboard">📊 Dashboard</a>
+                <a href="/upload">➕ New Detection</a>
+                <a href="/logout">🚪 Logout</a>
+            </div>
+        </header>
+        
+        <div class="info-box">
+            <h3>ℹ️ About Route Optimization</h3>
+            <p>
+                This system automatically groups nearby potholes into clusters and generates 
+                optimized repair routes. Clusters are prioritized by severity score, and routes 
+                within each cluster prioritize critical potholes first.
+            </p>
+        </div>
+        
+        {% if clusters %}
+            <div class="clusters-grid">
+                {% for cluster in clusters %}
+                <div class="cluster-card">
+                    <div class="cluster-header">
+                        <span class="cluster-name">{{ cluster.name }}</span>
+                        <span class="severity-score">
+                            Score: {{ cluster.severity_score }}
+                        </span>
+                    </div>
+                    
+                    <div class="cluster-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">{{ cluster.pothole_count }}</div>
+                            <div class="stat-label">Total Potholes</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">{{ "%.2f"|format(cluster.radius / 1000) }}</div>
+                            <div class="stat-label">Radius (km)</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">{{ cluster.route|length }}</div>
+                            <div class="stat-label">Repair Stops</div>
+                        </div>
+                    </div>
+                    
+                    <div style="color: #666; margin-bottom: 15px;">
+                        <strong>📍 Center:</strong> 
+                        {{ "%.4f"|format(cluster.center_lat) }}, {{ "%.4f"|format(cluster.center_lon) }}
+                    </div>
+                    
+                    {% if cluster.route %}
+                    <div class="route-section">
+                        <div class="route-header">
+                            🚧 Recommended Repair Route (Priority Order)
+                        </div>
+                        
+                        {% for stop in cluster.route %}
+                        <div class="route-item">
+                            <div class="route-order">#{{ stop.order }}</div>
+                            <div class="route-details">
+                                <div class="route-location">
+                                    Detection ID: {{ stop.detection_id }}
+                                </div>
+                                <div class="route-coords">
+                                    📍 {{ "%.4f"|format(stop.latitude) }}, {{ "%.4f"|format(stop.longitude) }}
+                                </div>
+                            </div>
+                            <span class="route-severity {{ stop.severity.lower() }}">
+                                {{ stop.severity }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" 
+                                onclick="exportRoute('{{ cluster.id }}')">
+                            📥 Export Route (GPS)
+                        </button>
+                        <button class="btn btn-success" 
+                                onclick="assignCrew('{{ cluster.id }}')">
+                            👷 Assign Repair Crew
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div style="font-size: 4em;">🗺️</div>
+                <h2>No Clusters Available</h2>
+                <p>Not enough detections with GPS coordinates to create clusters.</p>
+                <p style="margin-top: 10px; color: #666;">
+                    Ensure detections include latitude/longitude data for route optimization.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        function exportRoute(clusterId) {
+            // In a real implementation, this would generate a GPX or KML file
+            alert(`Exporting route for cluster ${clusterId}...\n\nThis would generate a GPS-compatible file for navigation systems.`);
+        }
+        
+        function assignCrew(clusterId) {
+            const crewName = prompt('Enter repair crew name/ID:');
+            if (crewName) {
+                alert(`Cluster ${clusterId} assigned to crew: ${crewName}\n\nNotifications would be sent to the crew's mobile devices.`);
+                // In real implementation: send notifications, update database
+            }
+        }
+    </script>
+</body>
+</html>
